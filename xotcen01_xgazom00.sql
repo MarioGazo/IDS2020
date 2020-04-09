@@ -161,9 +161,12 @@ SELECT
 FROM
     Lekcia
     NATURAL JOIN Trener
-    NATURAL JOIN Osoba
 WHERE
-    Rodne_cislo = 9904295555;
+    Rodne_cislo = 9904295555
+OR
+    Rodne_cislo = 5509306665
+OR
+    Rodne_cislo = 9804254444;
 
 -- Informácie o kurze, ktorého piata lekcie sa odohráva v pondelok a stojí viac ako 10e
 SELECT
@@ -179,7 +182,7 @@ AND
 AND
     Poradove_cislo = 5;
 
--- Informácie o trénerovi, ktorý vedie lekcie crossfitu s kapacitou miestnosti minimálne 60
+-- Informácie o trénerovi, ktorý vedie lekcie crossfitu s kapacitou miestnosti maximálne 60
 SELECT DISTINCT
     Meno, Priezvisko, Tel_cislo, Mesto
 FROM
@@ -194,23 +197,23 @@ AND
 AND
     Kapacita < 60;
 
--- Najtažšie kurzy na ktoré sú jednotlivé osoby prihlásené (najmenej 3)
+-- Vyhľadá názvy kurzov, ktorých trvanie je dlhšie ako 45 minút
 SELECT
-    Rodne_cislo, MAX(Obtiaznost) AS Najvacsia_obtiaznost
+    Nazov, MAX(Trvanie) AS Najdlhsi_kurz
 FROM
     Kurz
-    NATURAL JOIN Osoba
-HAVING MAX(Obtiaznost) > 3
-GROUP BY Osoba.Rodne_cislo;
+HAVING MAX(Trvanie) > 45
 
--- Najlahšie kurzy na ktoré sú jednotlivé osoby prihlásené (najviac 3)
+GROUP BY Nazov;
+
+-- Vyhľadá názov a typ kurzu, ktorého priemerná obtiažnosť je menšia ako 3
 SELECT
-    Rodne_cislo, MIN(Obtiaznost) AS Najmensia_obtiaznost
+    Nazov, Typ, AVG(Obtiaznost) AS Priemerná_obtiaznost
 FROM
     Kurz
-    NATURAL JOIN Osoba
-HAVING MIN(Obtiaznost) < 3
-GROUP BY Osoba.Rodne_cislo;
+HAVING AVG(Obtiaznost) < 3
+
+GROUP BY Nazov, Typ;
 
 -- Informácie o osobách ktoré sú prihlásené na lekcie
 SELECT
