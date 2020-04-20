@@ -51,15 +51,16 @@ CREATE TABLE Trener
 
 CREATE TABLE Lekcia
 (
-    Poradie     INT NOT NULL PRIMARY KEY,
+    Poradie     INT NOT NULL,
     Miesta      INT,
     Den         CHAR(10),
     Zahajenie   CHAR(5),
     Ukoncenie   CHAR(5),
     Cena        FLOAT,
     Miestnost   CHAR(50),
-    Kurz        CHAR(50),
+    Kurz        CHAR(50) NOT NULL ,
     Rodne_cislo INT,
+    CONSTRAINT Poradie_kurz PRIMARY KEY(Poradie, Kurz),
 
     CONSTRAINT Miestnost_fk
         FOREIGN KEY (Miestnost) REFERENCES Miestnost(Nazov),
@@ -73,11 +74,31 @@ CREATE TABLE Lekcia
 
 CREATE TABLE Prihlaseny
 (
-    Poradove_cislo  INT,
-    FOREIGN KEY     (Poradove_cislo) REFERENCES Lekcia(Poradie),
-    Prihlaseny      INT,
-    FOREIGN KEY     (Prihlaseny) REFERENCES Osoba(Rodne_cislo)
+    Poradie_lekcie INT,
+    Nazov_kurzu CHAR(50),
+    FOREIGN KEY     (Poradie_lekcie, Nazov_kurzu) REFERENCES Lekcia(Poradie, Kurz),
+    Rodne_cislo INT,
+    FOREIGN KEY     (Rodne_cislo) REFERENCES Osoba(Rodne_cislo)
 );
+
+-------------------------------------------------- Časť štvrtá ---------------------------------------------------------
+-- TRIGGERY
+-- Vždy v pondelok od 8-9 sa koná úvodná lekcia novo pridaného kurzu
+CREATE TRIGGER Uvodna_lekcia
+    AFTER INSERT ON Kurz
+    FOR EACH ROW
+BEGIN
+    INSERT INTO Lekcia(Poradie, Miesta, Den, Zahajenie, Ukoncenie, Cena, Miestnost, Kurz)
+    VALUES (0, 30, 'Pondelok', '8:00', '9:00', 0, 'Box', :NEW.Nazov);
+END;
+
+-- Po ukončení kurzu nie je nutné naďalej viesť záznam o jeho lekciách
+CREATE TRIGGER Koniec_kurzu
+    AFTER DELETE ON Kurz
+    FOR EACH ROW
+BEGIN
+    DELETE FROM Lekcia WHERE Lekcia.Kurz = :OLD.Nazov;
+END;
 
 -- Vlozenie dat
 
@@ -133,23 +154,23 @@ VALUES ((SELECT Rodne_cislo FROM Osoba WHERE Osoba.Rodne_cislo=5509306665),'17:0
 
 -- Lekcia
 INSERT INTO Lekcia(Poradie, Miesta, Den, Zahajenie, Ukoncenie, Cena, Miestnost, Kurz, Rodne_cislo)
-VALUES (3, 20, 'Pondelok', '12:00', '13:30', 17.50, 'Box','Crossfit', (SELECT Rodne_cislo FROM Trener WHERE Trener.Rodne_cislo=9904295555));
+VALUES (3, 20, 'Pondelok', '12:00', '13:30', 17.50, 'Box','Crossfit', 9904295555);
 
 INSERT INTO Lekcia(Poradie, Miesta, Den, Zahajenie, Ukoncenie, Cena, Miestnost, Kurz, Rodne_cislo)
-VALUES  (1, 2, 'Streda', '12:45', '17:50', 23.99,'Bazen', 'Plávanie', (SELECT Rodne_cislo FROM Trener WHERE Trener.Rodne_cislo=9804254444));
+VALUES  (1, 2, 'Streda', '12:45', '17:50', 23.99,'Bazen', 'Plávanie', 9804254444);
 
 INSERT INTO Lekcia(Poradie, Miesta, Den, Zahajenie, Ukoncenie, Cena, Miestnost, Kurz, Rodne_cislo)
-VALUES  (5, 8, 'Streda', '12:45', '17:50', 10, 'Spinning', 'Body_form', (SELECT Rodne_cislo FROM Trener WHERE Trener.Rodne_cislo=9904295555));
+VALUES  (5, 8, 'Streda', '12:45', '17:50', 10, 'Spinning', 'Body_form', 9904295555);
 
 -- Prihlaseny
-INSERT INTO  Prihlaseny(Poradove_cislo, Prihlaseny)
-VALUES (1, 5509306665);
+INSERT INTO  Prihlaseny(Poradie_lekcie, Nazov_kurzu, Rodne_cislo)
+VALUES (1, 'Plávanie', 5509306665);
 
-INSERT INTO  Prihlaseny(Poradove_cislo, Prihlaseny)
-VALUES (5, 5509306665);
+INSERT INTO  Prihlaseny(Poradie_lekcie, Nazov_kurzu, Rodne_cislo)
+VALUES (5, 'Body_form', 5509306665);
 
-INSERT INTO  Prihlaseny(Poradove_cislo, Prihlaseny)
-VALUES (1, 8904253333);
+INSERT INTO  Prihlaseny(Poradie_lekcie, Nazov_kurzu, Rodne_cislo)
+VALUES (1, 'Plávanie', 8904253333);
 
 -------------------------------------------------- Časť tretia ---------------------------------------------------------
 
@@ -180,7 +201,7 @@ WHERE
 AND
     Den = 'Pondelok'
 AND
-    Poradove_cislo = 5;
+    Poradie_lekcie = 5;
 
 -- Informácie o trénerovi, ktorý vedie lekcie crossfitu s kapacitou miestnosti maximálne 60
 SELECT DISTINCT
@@ -264,5 +285,8 @@ IN
             Trener.Zaciatok = '17:25'
             AND Lekcia.Zahajenie = '12:45'
     );
+
+-- TRIGGER DEMO
+DELETE FROM Kurz WHERE Nazov = 'Crossfit';
 
 /*  Koniec súboru database.sql */
