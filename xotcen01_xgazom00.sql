@@ -253,7 +253,7 @@ WHERE EXISTS
             Osoba.Rodne_cislo = Rodne_cislo
     );
 
--- Informácie o miestostiach v ktorých sa odohrávajú lekcie
+-- Informácie o miestnostiach v ktorých sa odohrávajú lekcie
 SELECT
     Nazov, Umiestnenie, Kapacita
 FROM
