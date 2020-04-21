@@ -11,6 +11,8 @@ DROP TABLE Osoba;
 DROP TABLE Miestnost;
 DROP TABLE Kurz;
 
+DROP MATERIALIZED VIEW mat_pohlad;
+
 -- Vytvorenie blokov schémy databáze
 CREATE TABLE Kurz
 (
@@ -199,9 +201,9 @@ FROM
 WHERE
     Cena > 10
 AND
-    Den = 'Pondelok'
+     Poradie_lekcie = 5
 AND
-    Poradie_lekcie = 5;
+    Den = 'Pondelok';
 
 -- Informácie o trénerovi, ktorý vedie lekcie crossfitu s kapacitou miestnosti maximálne 60
 SELECT DISTINCT
@@ -291,7 +293,7 @@ DELETE FROM Kurz WHERE Nazov = 'Crossfit';
 
 
 
--- Procedury
+-- Procedury a funkcie
 
 CREATE OR REPLACE PROCEDURE najdi_osobu
 AS
@@ -390,4 +392,83 @@ END;
 CALL najdi_osobu();
 CALL celkova_kapacita();
 
-/*  Koniec súboru database.sql */
+
+-- Explain plan
+
+EXPLAIN PLAN FOR
+SELECT
+    Nazov, Typ, AVG(Obtiaznost) AS priemerna_obtiaznost
+FROM
+    Kurz
+HAVING AVG(Obtiaznost) < 3
+
+GROUP BY Nazov, Typ;
+
+SELECT * FROM TABLE(dbms_xplan.display);
+
+
+EXPLAIN PLAN FOR
+SELECT
+    Rodne_cislo, Poradie, Kurz, Den, AVG(Cena) AS priemerna_cena_lekcii
+FROM
+    Lekcia
+    NATURAL JOIN Prihlaseny
+HAVING AVG(Cena) < 10
+
+GROUP BY
+    Rodne_cislo, Poradie, Kurz, Den;
+
+SELECT * FROM TABLE(dbms_xplan.display);
+
+-- Explain plan s pouzitim indexu
+
+CREATE INDEX idx ON Prihlaseny(Rodne_cislo);
+
+EXPLAIN PLAN FOR
+SELECT
+    Rodne_cislo, Poradie, Kurz, Den, AVG(Cena) AS priemerna_cena_lekcii
+FROM
+    Lekcia
+    NATURAL JOIN Prihlaseny
+HAVING AVG(Cena) < 10
+
+GROUP BY
+    Rodne_cislo, Poradie, Kurz, Den;
+
+SELECT * FROM TABLE(dbms_xplan.display);
+
+DROP INDEX idx;
+
+
+-- Pridelenie prav
+
+GRANT ALL ON Osoba TO XGAZOM00;
+GRANT ALL ON Kurz TO XGAZOM00;
+GRANT ALL ON Lekcia TO XGAZOM00;
+GRANT ALL ON Miestnost TO XGAZOM00;
+GRANT ALL ON Trener TO XGAZOM00;
+GRANT ALL ON Prihlaseny TO XGAZOM00;
+
+GRANT EXECUTE ON najdi_osobu TO XGAZOM00;
+GRANT EXECUTE ON celkova_kapacita TO XGAZOM00;
+GRANT EXECUTE ON ziskaj_celkovy_pocet TO XGAZOM00;
+GRANT EXECUTE ON vypocitaj_percent_podiel TO XGAZOM00;
+
+
+-- Vytvorenie materializovaneho pohladu
+
+CREATE MATERIALIZED VIEW mat_pohlad
+
+NOLOGGING
+CACHE
+BUILD IMMEDIATE
+REFRESH ON COMMIT
+
+AS
+    SELECT Meno, Priezvisko FROM Osoba o JOIN Trener t ON o.Rodne_cislo = t.Rodne_cislo;
+
+GRANT ALL ON mat_pohlad TO XGAZOM00;
+
+
+
+/*  Koniec súboru xotcen01_xgazom00.sql */
