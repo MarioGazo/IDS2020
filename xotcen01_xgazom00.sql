@@ -289,4 +289,105 @@ IN
 -- TRIGGER DEMO
 DELETE FROM Kurz WHERE Nazov = 'Crossfit';
 
+
+
+-- Procedury
+
+CREATE OR REPLACE PROCEDURE najdi_osobu
+AS
+    priezvisko Osoba.Priezvisko%type;
+    ulica Osoba.Ulica%type;
+    cislo_domu Osoba.Popisne_cislo%type;
+    mesto Osoba.Mesto%type;
+    CURSOR cur is SELECT Priezvisko, Ulica, Popisne_cislo, Mesto FROM Osoba;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Informácie o bývaní osôb, ktorých priezvisko je Beznohá.');
+    IF cur %ISOPEN THEN
+        CLOSE cur ;
+    END IF;
+    OPEN cur;
+
+    LOOP
+         FETCH cur INTO priezvisko, ulica, cislo_domu, mesto;
+         EXIT WHEN cur%notfound;
+         IF priezvisko = 'Beznohá' THEN
+             DBMS_OUTPUT.put_line('Osoba '|| priezvisko ||'býva v meste '|| mesto ||'na ulici '|| ulica ||' '||cislo_domu);
+         END IF;
+    END LOOP;
+    CLOSE cur;
+
+END;
+
+
+CREATE OR REPLACE PROCEDURE celkova_kapacita
+AS
+    CURSOR cur IS SELECT * FROM Miestnost;
+    curs_var cur%ROWTYPE;
+    celkova_kapacita NUMBER;
+    percenta NUMBER;
+BEGIN
+    IF cur %ISOPEN THEN
+        CLOSE cur ;
+    END IF;
+    OPEN cur;
+
+    celkova_kapacita := ziskaj_celkovy_pocet();
+
+    LOOP
+        FETCH cur INTO curs_var;
+        EXIT WHEN cur%NOTFOUND;
+        IF curs_var.Kapacita < 60 THEN
+            percenta := vypocitaj_percent_podiel(celkova_kapacita, curs_var.Kapacita);
+            percenta := ROUND(percenta);
+            DBMS_OUTPUT.put_line('Miestnosť s kapacitou pod 60 ľudí je ' ||curs_var.Nazov|| 's kapacitou ' ||curs_var.Kapacita);
+            DBMS_OUTPUT.put_line('Miestnosť tvorí ' ||percenta|| '% z celkovej kapacity.');
+        END IF;
+    END LOOP;
+    DBMS_OUTPUT.put_line('Celková kapacita v miestnostiach je ' ||celkova_kapacita);
+
+    CLOSE cur;
+END;
+
+
+CREATE OR REPLACE FUNCTION vypocitaj_percent_podiel(celkovy_pocet IN NUMBER, jedna_miestnost IN number)
+RETURN NUMBER
+AS
+    vysledok NUMBER;
+BEGIN
+    vysledok := (jedna_miestnost * 100) / celkovy_pocet;
+    RETURN vysledok;
+
+    EXCEPTION WHEN zero_divide THEN
+        RETURN 0;
+END;
+
+CREATE OR REPLACE FUNCTION ziskaj_celkovy_pocet
+RETURN NUMBER
+AS
+    CURSOR cur IS SELECT Kapacita FROM Miestnost;
+    celkovy_pocet NUMBER;
+    iter Miestnost.Kapacita%TYPE;
+BEGIN
+    IF cur %ISOPEN THEN
+        CLOSE cur ;
+    END IF;
+    OPEN cur;
+
+    celkovy_pocet := 0;
+
+    LOOP
+        FETCH cur INTO iter;
+        EXIT WHEN cur%NOTFOUND;
+        celkovy_pocet := celkovy_pocet + iter;
+    END LOOP;
+
+    CLOSE cur;
+
+    RETURN celkovy_pocet;
+END;
+
+
+CALL najdi_osobu();
+CALL celkova_kapacita();
+
 /*  Koniec súboru database.sql */
